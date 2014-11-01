@@ -1,0 +1,25 @@
+Case 1: Branch Dependent on Others
+
+        Predict NT -> Actual T
+                -If(last_N_predctions < 70% or just beginning)
+                        int num = delete inconsistent terms --where to delete from -- delete from most recent disjunction [IF (insert possible confidence logic)]
+                -If (num == 0)
+                        add disjunction
+
+        Predict T -> Actual NT
+		if (num_pred_T_but_NT > N_threshold (building barrier -- case of same gh predicting different values) )
+                	Add Level 2: inversion of level 1 
+                	Select Bit: Store 2^4 GH values per branch in array arr. Initially all 0's. Turn on bit if in this if statement. Select bit -> Compare(GH,arr[i])
+
+Case 2: Branch not dependent on others
+
+	If (last_N_predictions < 50%)
+		use static predictor 
+
+extra information per branch: last_N_predictions, num_pred_T_but_NT
+
+
+
+
+logic
+ only deleting terms that lead to contradictions --> will never mispredict on those GH values UNLESS same gh predicts different values  
