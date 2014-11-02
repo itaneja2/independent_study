@@ -143,6 +143,8 @@ class PREDICTOR
         {
             if (/* conditional branch */ br->is_conditional) {
                 address_t pc = br->instruction_addr;
+				branch_info_t branch_info = branch_table[pc]; 
+				/*
                 std::size_t index = pht_index(pc, bhr);
                 counter_t cnt = pht[index];
                 if (taken)
@@ -151,6 +153,38 @@ class PREDICTOR
                     cnt = counter_dec(cnt);
                 pht[index] = cnt;
                 update_bhr(taken);
+				*/
+				if (get_prediction(br,os) == false && taken == true)
+				{
+					if (branch_info.iteration == 1)
+					{
+						//DNF = bhr 
+						for(int i = 0; i < BHR_LENGTH; i++)
+                    	{
+                        	branch_table[pc].DNF[0][i] =  ((bhr >> (BHR_LENGTH-i)) & 1); 
+						} 
+	
+					}
+					else if ((((double)branch_info.last_N_pred/10.0) < .7))
+					{
+						int num_deleted = 0; 
+						int delete_index = branch_info.num_terms-1; //delete from most recent disjunction 
+						for(int i = 0; i < BHR_LENGTH; i++)
+						{
+							if ( ( (((bhr >> (BHR_LENGTH-i)) & 1) == 1) && branch_info.DNF[delete_index][i] == 0 ) ||
+							( (((bhr >> (BHR_LENGTH-i)) & 1) == 0) && branch_info.DNF[delete_index][i] == 1 ) )
+							{
+								branch_table[pc].DNF[delete_index][i] = -1; 
+							}
+						} 
+						if (num_deleted == 0)
+						{
+							//add disjunction 
+						}
+					}
+				}
+				
+				
             }
         }
 };
