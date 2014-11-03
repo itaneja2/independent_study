@@ -119,9 +119,9 @@ class PREDICTOR
 
 							if (j == BHR_LENGTH-1)
 							{
+								//printf("bhr: %d \n", bhr); 
 								if (result == 1)
 								{
-									printf("here \n"); 
 									prediction = true; 
 									goto end; 
 								}
@@ -160,7 +160,6 @@ class PREDICTOR
 				*/
 				if (get_prediction(br,os) == false && taken == true)
 				{
-					printf("here \n"); 
 					if (branch_info.iteration == 1)
 					{
 						//DNF = bhr 
@@ -197,7 +196,7 @@ class PREDICTOR
 					}
 				}
 				
-				
+				update_bhr(taken); 			
 	    }
         }
 };
