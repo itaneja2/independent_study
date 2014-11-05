@@ -24,7 +24,7 @@ class PREDICTOR
     {
 		std::vector < std::vector<int> > DNF;
 		int num_terms;    
-		int last_N_pred; 
+		int num_incorrect; 
 		int iteration; //determine if just beginning building the branch 
 		int num_pred_T_but_NT;
     };
@@ -65,7 +65,7 @@ class PREDICTOR
             bool prediction = false;
 			
             if (/* conditional branch */ br->is_conditional) 
-	    {
+	    	{
 				/*
                 address_t pc = br->instruction_addr;
                 std::size_t index = pht_index(pc, bhr);
@@ -83,7 +83,7 @@ class PREDICTOR
 						(branch_info.DNF[i]).resize(BHR_LENGTH); 
 					} 
 					branch_info.num_terms = 1; 
-					branch_info.last_N_pred = 0;  
+					branch_info.num_incorrect = 0;  
 					branch_info.iteration = 0;  
 					branch_info.num_pred_T_but_NT = 0; 
 					branch_table[pc] = branch_info; //insert into map  
@@ -99,14 +99,14 @@ class PREDICTOR
 							if (branch_table[pc].DNF[i][j] == 1)
 							{
 								
-								result = result & ((bhr >> (BHR_LENGTH-j)) & 1);  
+								result = result & ((bhr >> (BHR_LENGTH-1-j)) & 1);  
 								if (result == 0) {
 									break; 
 								}
 							}
 							else if (branch_table[pc].DNF[i][j] == 0)
 							{
-								result = result & ~((bhr >> (BHR_LENGTH-j)) & 1);
+								result = result & ~((bhr >> (BHR_LENGTH-1-j)) & 1);
  								if (result == 0) {
 								    break;
 								}
@@ -143,10 +143,15 @@ class PREDICTOR
     // argument (taken) indicating whether or not the branch was taken.
     void update_predictor(const branch_record_c* br, const op_state_c* os, bool taken)
         {
+	    
             if (br->is_conditional) {
 		    
 		    
 		    address_t pc = br->instruction_addr;
+		    if ( (get_prediction(br,os) == false && taken == true) || (get_prediction(br,os) == true && taken == false) )
+		    {
+				branch_table[pc].num_incorrect++;  
+		    }
 		    branch_info_t branch_info = branch_table[pc]; 
 			/*
                 std::size_t index = pht_index(pc, bhr);
@@ -160,41 +165,56 @@ class PREDICTOR
 				*/
 				if (get_prediction(br,os) == false && taken == true)
 				{
-					if (branch_info.iteration == 1)
+					if (branch_info.iteration == 0)
 					{
 						//DNF = bhr 
 						for(int i = 0; i < BHR_LENGTH; i++)
 						{
-						    branch_table[pc].DNF[0][i] =  ((bhr >> (BHR_LENGTH-i)) & 1); 
-						} 
+						    branch_table[pc].DNF[0][i] =  ((bhr >> (BHR_LENGTH-1-i)) & 1);
+						}
+						branch_table[pc].iteration++; //update iterations
 	
 					}
-					else if ((((double)branch_info.last_N_pred/10.0) < .7))
+					else if ((((double)branch_info.num_incorrect/(double)(branch_table[pc].iteration)) > .3) || branch_table[pc].iteration < 5)
 					{
+						branch_table[pc].iteration++; 
+						printf("incorrect %G \n",((double)branch_info.num_incorrect));  
+						printf ("total %G \n",(double)(branch_table[pc].iteration));
 						int num_deleted = 0; 
-						int delete_index = branch_info.num_terms-1; //delete from most recent disjunction 
+						int delete_index = branch_info.num_terms-1; //delete from most recent disjunction
 						for(int i = 0; i < BHR_LENGTH; i++)
 						{
-							if ( ( (((bhr >> (BHR_LENGTH-i)) & 1) == 1) && branch_info.DNF[delete_index][i] == 0 ) ||
-							( (((bhr >> (BHR_LENGTH-i)) & 1) == 0) && branch_info.DNF[delete_index][i] == 1 ) )
+							if ( ( (((bhr >> (BHR_LENGTH-1-i)) & 1) == 1) && branch_info.DNF[delete_index][i] == 0 ) ||
+							( (((bhr >> (BHR_LENGTH-1-i)) & 1) == 0) && branch_info.DNF[delete_index][i] == 1 ) )
 							{
 								branch_table[pc].DNF[delete_index][i] = -1;
-								num_deleted++;  
+								num_deleted++; 
+								printf("here \n"); 
 							}
 						} 
 						if (num_deleted == 0)
 						{
 							//add disjunction
-							branch_table[pc].num_terms++;
+							printf("adding disj \n"); 
+							branch_table[pc].num_terms++; //update num_terms
 							int pos = branch_table[pc].num_terms-1;   
 							for(int i = 0; i < BHR_LENGTH; i++)
 							{
-							    branch_table[pc].DNF[pos][i] =  ((bhr >> (BHR_LENGTH-i)) & 1); 
+							    branch_table[pc].DNF[pos][i] =  ((bhr >> (BHR_LENGTH-1-i)) & 1); 
 							}
 	
 						}
 					}
 				}
+				else if (get_prediction(br,os) == true && taken == false)
+				{
+				    branch_table[pc].iteration++; 
+				}
+				else
+				{
+				    branch_table[pc].iteration++; 
+				}
+
 				
 				update_bhr(taken); 			
 	    }
@@ -202,4 +222,4 @@ class PREDICTOR
 };
 
 #endif // PREDICTOR_H_SEEN
-
+ 
